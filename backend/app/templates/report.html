@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>VAPT Report – {{ scan.id[:8] }}</title>
+<style>
+  :root {
+    --c-critical: #dc2626;
+    --c-high: #ea580c;
+    --c-medium: #ca8a04;
+    --c-low: #2563eb;
+    --c-info: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10pt; color: #1f2937; background: #fff; }
+  .page { padding: 28mm 20mm; }
+  /* --- Header --- */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1e40af; padding-bottom: 10px; margin-bottom: 20px; }
+  .header-brand { font-size: 18pt; font-weight: 700; color: #1e40af; }
+  .header-meta { text-align: right; font-size: 8pt; color: #6b7280; }
+  /* --- Sections --- */
+  h2 { font-size: 12pt; font-weight: 700; color: #1e40af; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin: 20px 0 10px; }
+  h3 { font-size: 10pt; font-weight: 600; color: #374151; margin: 12px 0 4px; }
+  p, li { font-size: 9.5pt; line-height: 1.5; color: #374151; }
+  ul { padding-left: 16px; }
+  /* --- Summary table --- */
+  .summary-grid { display: flex; gap: 12px; margin-bottom: 16px; }
+  .summary-box { flex: 1; border-radius: 4px; padding: 10px 12px; text-align: center; }
+  .summary-box .count { font-size: 22pt; font-weight: 700; }
+  .summary-box .label { font-size: 8pt; text-transform: uppercase; letter-spacing: .04em; }
+  .box-critical { background: #fef2f2; color: var(--c-critical); }
+  .box-high     { background: #fff7ed; color: var(--c-high); }
+  .box-medium   { background: #fefce8; color: var(--c-medium); }
+  .box-low      { background: #eff6ff; color: var(--c-low); }
+  .box-info     { background: #f9fafb; color: var(--c-info); }
+  /* --- Finding card --- */
+  .finding { border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 12px; page-break-inside: avoid; }
+  .finding-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; border-radius: 4px 4px 0 0; }
+  .finding-body { padding: 10px 12px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .badge-critical { background: #fee2e2; color: #b91c1c; }
+  .badge-high     { background: #ffedd5; color: #c2410c; }
+  .badge-medium   { background: #fef9c3; color: #a16207; }
+  .badge-low      { background: #dbeafe; color: #1d4ed8; }
+  .badge-informational { background: #f3f4f6; color: #4b5563; }
+  .finding-title  { font-size: 9.5pt; font-weight: 600; flex: 1; }
+  .meta-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
+  .meta-item { font-size: 8pt; color: #6b7280; }
+  .meta-item strong { color: #374151; }
+  .section-label { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .05em; color: #9ca3af; margin-top: 8px; margin-bottom: 2px; }
+  .section-text { font-size: 9pt; color: #374151; white-space: pre-wrap; }
+  /* --- Footer --- */
+  @page { margin: 0; }
+  .footer { position: fixed; bottom: 12mm; left: 20mm; right: 20mm; border-top: 1px solid #e5e7eb; padding-top: 4px; display: flex; justify-content: space-between; font-size: 7.5pt; color: #9ca3af; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="header-brand">Mu-Sigma VAPT</div>
+      <div style="font-size:9pt;color:#6b7280;margin-top:2px;">Vulnerability Assessment &amp; Penetration Testing Report</div>
+    </div>
+    <div class="header-meta">
+      <div><strong>Target:</strong> {{ target.name }}</div>
+      <div><strong>Scan ID:</strong> {{ scan.id[:8] }}</div>
+      <div><strong>Profile:</strong> {{ scan.scan_profile }}</div>
+      <div><strong>Generated:</strong> {{ generated_at }}</div>
+      <div><strong>By:</strong> {{ generated_by }}</div>
+    </div>
+  </div>
+
+  {% if executive_summary %}
+  <h2>Executive Summary</h2>
+  <p style="white-space:pre-wrap">{{ executive_summary }}</p>
+  {% endif %}
+
+  <h2>Findings Summary</h2>
+  <div class="summary-grid">
+    <div class="summary-box box-critical"><div class="count">{{ counts.critical }}</div><div class="label">Critical</div></div>
+    <div class="summary-box box-high"><div class="count">{{ counts.high }}</div><div class="label">High</div></div>
+    <div class="summary-box box-medium"><div class="count">{{ counts.medium }}</div><div class="label">Medium</div></div>
+    <div class="summary-box box-low"><div class="count">{{ counts.low }}</div><div class="label">Low</div></div>
+    <div class="summary-box box-info"><div class="count">{{ counts.informational }}</div><div class="label">Info</div></div>
+  </div>
+  <p><strong>Total findings:</strong> {{ findings | length }} &nbsp;|&nbsp; <strong>Scan completed:</strong> {{ scan.completed_at or "—" }} &nbsp;|&nbsp; <strong>Tools:</strong> {{ scan.tools | join(", ") }}</p>
+
+  <h2>Detailed Findings</h2>
+  {% for f in findings %}
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-{{ f.severity }}">{{ f.severity }}</span>
+      <span class="finding-title">{{ f.title }}</span>
+      <span style="font-size:7.5pt;color:#9ca3af;">{{ f.source_tool }}</span>
+    </div>
+    <div class="finding-body">
+      <div class="meta-row">
+        {% if f.cve %}<div class="meta-item"><strong>CVE:</strong> {{ f.cve }}</div>{% endif %}
+        {% if f.cwe %}<div class="meta-item"><strong>CWE:</strong> {{ f.cwe }}</div>{% endif %}
+        {% if f.cvss_score %}<div class="meta-item"><strong>CVSS:</strong> {{ f.cvss_score }}</div>{% endif %}
+        {% if f.affected_resource %}<div class="meta-item"><strong>Resource:</strong> {{ f.affected_resource[:80] }}</div>{% endif %}
+        <div class="meta-item"><strong>Status:</strong> {{ f.status }}</div>
+      </div>
+      {% if f.description %}
+      <div class="section-label">Description</div>
+      <div class="section-text">{{ f.description }}</div>
+      {% endif %}
+      {% if f.impact %}
+      <div class="section-label">Impact</div>
+      <div class="section-text">{{ f.impact }}</div>
+      {% endif %}
+      {% if f.recommendation %}
+      <div class="section-label">Recommendation</div>
+      <div class="section-text">{{ f.recommendation }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <p style="color:#6b7280;font-style:italic;">No findings recorded for this scan.</p>
+  {% endfor %}
+
+  <div class="footer">
+    <span>Mu-Sigma VAPT Management Platform — CONFIDENTIAL</span>
+    <span>{{ generated_at }}</span>
+  </div>
+</div>
+</body>
+</html>
